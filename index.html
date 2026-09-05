@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>アンケート統合管理ポータル</title>
+  <title>アンケート統合管理ポータル（複数選択対応）</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 min-h-screen p-6 font-sans">
@@ -13,59 +13,48 @@
     <div class="bg-gradient-to-r from-slate-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl flex justify-between items-center">
       <div>
         <h1 class="text-2xl font-bold tracking-tight">📋 アンケート統合管理システム</h1>
-        <p class="text-xs text-slate-300 mt-1">アンケート生成・手動獲得者/対象者設定 & スプレッドシート同期</p>
+        <p class="text-xs text-slate-300 mt-1">アンケート一括選択・複数更新 & スプレッドシート同期</p>
       </div>
       <button id="loadSurveysBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow">
         シート再読み込み 🔄
       </button>
     </div>
 
-    <!-- 1. アンケート一括生成エリア -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 space-y-4">
-      <div class="border-b pb-3">
-        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold">STEP 1</span>
-          新規アンケート一括生成
-        </h2>
-      </div>
-      
-      <form id="surveyForm" class="space-y-4">
-        <textarea id="inputText" rows="5" required placeholder="AIが作成したテキストを貼り付け..." class="w-full border border-slate-300 rounded-xl p-4 text-sm font-mono bg-slate-50"></textarea>
-        <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow">
-          Googleフォーム生成 ＆ シートへ登録
-        </button>
-      </form>
-      <div id="statusMessage" class="hidden text-center p-3 rounded-xl text-sm font-bold"></div>
-    </div>
-
-    <!-- 2. モニター対象者・獲得者設定エリア -->
+    <!-- モニター対象者・獲得者設定エリア（一括選択版） -->
     <div class="bg-white rounded-2xl shadow-xl p-6 space-y-6">
       <div class="border-b pb-3">
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full font-bold">STEP 2</span>
-          獲得者 ＆ 対象者データの直接反映
+          🎯 獲得者 ＆ 対象者の一括設定
         </h2>
-        <p class="text-xs text-slate-500 mt-1">アンケート名を選択し、獲得者・対象者の番号を入力してスプレッドシートへ書き込みます。</p>
+        <p class="text-xs text-slate-500 mt-1">複数のアンケートをチェックして一括でモニター番号を適用できます。</p>
       </div>
 
-      <!-- アンケート名選択 -->
-      <div>
-        <label class="block text-sm font-bold text-slate-700 mb-2">① 対象アンケートの選択</label>
-        <select id="surveySelect" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50 font-medium">
-          <option value="">-- スプレッドシートから読み込んでください --</option>
-        </select>
+      <!-- 複数選択エリア -->
+      <div class="space-y-3">
+        <div class="flex justify-between items-center">
+          <label class="block text-sm font-bold text-slate-700">① 対象アンケートの選択（複数選択可）</label>
+          <div class="space-x-2">
+            <button id="selectAllBtn" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-lg font-semibold transition">全選択</button>
+            <button id="deselectAllBtn" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-1 rounded-lg font-semibold transition">全解除</button>
+          </div>
+        </div>
+
+        <!-- チェックボックス群を表示するコンテナ -->
+        <div id="surveyCheckboxContainer" class="max-h-60 overflow-y-auto border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2">
+          <p class="text-xs text-slate-400">シートから読み込んでいます...</p>
+        </div>
       </div>
 
-      <!-- 番号入力グリッド -->
+      <!-- 番号入力エリア -->
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
         
         <!-- 🏆 獲得者入力 -->
         <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
           <div class="flex justify-between items-center">
             <label class="block text-sm font-bold text-amber-800">🏆 獲得者モニター番号</label>
-            <span class="text-xs text-slate-500">区切り不要・3桁自動切出</span>
+            <span class="text-xs text-slate-500">3桁自動分割</span>
           </div>
-          <textarea id="rawWinnerInput" rows="4" placeholder="例: 101102103（101, 102, 103に自動変換）" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
+          <textarea id="rawWinnerInput" rows="4" placeholder="例: 101102103（連続入力可）" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
           
           <div class="text-xs space-y-1">
             <div class="text-slate-600 font-medium">整形結果 (<span id="winnerCount" class="font-bold text-amber-700">0</span>人):</div>
@@ -77,9 +66,9 @@
         <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
           <div class="flex justify-between items-center">
             <label class="block text-sm font-bold text-emerald-800">🎯 本アンケート対象者モニター番号</label>
-            <span class="text-xs text-slate-500">区切り不要・3桁自動切出</span>
+            <span class="text-xs text-slate-500">3桁自動分割</span>
           </div>
-          <textarea id="rawTargetInput" rows="4" placeholder="例: 104105106（104, 105, 106に自動変換）" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
+          <textarea id="rawTargetInput" rows="4" placeholder="例: 104105106（連続入力可）" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
           
           <div class="text-xs space-y-1">
             <div class="text-slate-600 font-medium">整形結果 (<span id="targetCount" class="font-bold text-emerald-700">0</span>人):</div>
@@ -91,7 +80,7 @@
 
       <!-- 反映ボタン -->
       <button id="saveToSheetBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg text-base">
-        💾 スプレッドシートに獲得者・対象者を反映する
+        💾 選択したアンケートに一括更新を適用する
       </button>
 
       <div id="syncStatus" class="hidden text-center p-3 rounded-xl text-sm font-bold"></div>
@@ -129,78 +118,85 @@
       targetCount.textContent = codes.length;
     });
 
+    // アンケート一覧をチェックボックス形式で読み込み
     async function loadSurveys() {
-      const select = document.getElementById('surveySelect');
-      select.innerHTML = '<option value="">読み込み中...</option>';
+      const container = document.getElementById('surveyCheckboxContainer');
+      container.innerHTML = '<p class="text-xs text-slate-400">読み込み中...</p>';
+      
       try {
         const res = await fetch(GAS_API_URL);
         const data = await res.json();
         if (data.status === "OK") {
-          select.innerHTML = '<option value="">-- アンケートを選択してください --</option>';
-          data.surveys.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.title;
-            opt.textContent = `[${s.type}] ${s.title} (${s.point}pt)`;
-            opt.dataset.winner = s.winner || "";
-            opt.dataset.target = s.target || "";
-            select.appendChild(opt);
+          if (data.surveys.length === 0) {
+            container.innerHTML = '<p class="text-xs text-slate-400">登録済みのアンケートがありません。</p>';
+            return;
+          }
+          container.innerHTML = '';
+          data.surveys.forEach((s, idx) => {
+            const wrapper = document.createElement('label');
+            wrapper.className = "flex items-center gap-3 bg-white p-2.5 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-100 transition";
+            wrapper.innerHTML = `
+              <input type="checkbox" value="${s.title}" class="survey-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-slate-300">
+              <span class="text-sm font-medium text-slate-800">[${s.type}] ${s.title} (${s.point}pt)</span>
+            `;
+            container.appendChild(wrapper);
           });
         }
       } catch (e) {
-        select.innerHTML = '<option value="">読み込み失敗</option>';
+        container.innerHTML = '<p class="text-xs text-rose-500 font-bold">読み込み失敗</p>';
       }
     }
 
-    document.getElementById('surveySelect').addEventListener('change', (e) => {
-      const selected = e.target.options[e.target.selectedIndex];
-      if (selected && selected.value) {
-        winnerInput.value = selected.dataset.winner || "";
-        targetInput.value = selected.dataset.target || "";
-        winnerInput.dispatchEvent(new Event('input'));
-        targetInput.dispatchEvent(new Event('input'));
-      }
+    // 全選択 / 全解除
+    document.getElementById('selectAllBtn').addEventListener('click', () => {
+      document.querySelectorAll('.survey-checkbox').forEach(cb => cb.checked = true);
+    });
+    document.getElementById('deselectAllBtn').addEventListener('click', () => {
+      document.querySelectorAll('.survey-checkbox').forEach(cb => cb.checked = false);
     });
 
     document.getElementById('loadSurveysBtn').addEventListener('click', loadSurveys);
 
+    // 一括更新処理
     document.getElementById('saveToSheetBtn').addEventListener('click', async () => {
-      const title = document.getElementById('surveySelect').value;
+      const selectedBoxes = Array.from(document.querySelectorAll('.survey-checkbox:checked'));
       const syncStatus = document.getElementById('syncStatus');
       
-      if (!title) {
-        alert('アンケートを選択してください。');
+      if (selectedBoxes.length === 0) {
+        alert('対象のアンケートを1つ以上選択してください。');
         return;
       }
 
+      const selectedTitles = selectedBoxes.map(cb => cb.value);
       const winners = parse3DigitCodes(winnerInput.value).join(', ');
       const targets = parse3DigitCodes(targetInput.value).join(', ');
 
       syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 text-center";
-      syncStatus.textContent = "スプレッドシートへ更新中...";
+      syncStatus.textContent = `${selectedTitles.length}件のアンケートへ一括更新中...`;
       syncStatus.classList.remove('hidden');
 
       try {
-        const res = await fetch(GAS_API_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: "updateSurveys",
-            title: title,
-            winner: winners,
-            target: targets
-          })
-        });
-        const result = await res.json();
-
-        if (result.status === "OK") {
-          syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 text-center";
-          syncStatus.textContent = `✅ スプレッドシートを更新しました！（${title}）`;
-          loadSurveys();
-        } else {
-          throw new Error(result.message);
+        // 選択されたアンケートすべてに順次更新を実行
+        let successCount = 0;
+        for (const title of selectedTitles) {
+          const res = await fetch(GAS_API_URL, {
+            method: 'POST',
+            body: JSON.stringify({
+              action: "updateSurveys",
+              title: title,
+              winner: winners,
+              target: targets
+            })
+          });
+          const result = await res.json();
+          if (result.status === "OK") successCount++;
         }
+
+        syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 text-center";
+        syncStatus.textContent = `✅ 一括更新完了: 全${successCount}件のアンケートを更新しました！`;
       } catch (err) {
         syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300 text-center";
-        syncStatus.textContent = "❌ 更新失敗: " + err.message;
+        syncStatus.textContent = "❌ 更新エラーが発生しました: " + err.message;
       }
     });
 
