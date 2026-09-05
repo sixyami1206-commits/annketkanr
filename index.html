@@ -20,7 +20,7 @@
       </button>
     </div>
 
-    <!-- 1. 新規アンケート一括生成エリア（グループ名付き） -->
+    <!-- 1. 新規アンケート一括生成エリア -->
     <div class="bg-white rounded-2xl shadow-xl p-6 space-y-4">
       <div class="border-b pb-3">
         <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
@@ -30,9 +30,17 @@
       </div>
       
       <form id="surveyForm" class="space-y-4">
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">グループ名（タグ）</label>
-          <input type="text" id="groupNameInput" required placeholder="例: 4月度案件A" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="block text-sm font-bold text-slate-700 mb-1">グループ名（タグ）</label>
+            <input type="text" id="groupNameInput" required placeholder="例: 4月度案件A" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50">
+          </div>
+          <div class="flex items-center pt-6">
+            <label class="flex items-center gap-2 cursor-pointer text-sm font-bold text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-200 w-full">
+              <input type="checkbox" id="sokuPCheck" class="w-4 h-4 text-indigo-600 rounded">
+              ⚡ 即P（即時ポイント付与）対象にする
+            </label>
+          </div>
         </div>
         <div>
           <label class="block text-sm font-bold text-slate-700 mb-1">AIテキスト貼り付け</label>
@@ -111,7 +119,7 @@
   </div>
 
   <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyhZoykw8fxGd1a_unzChuHFct1dK-P9S8TErPVTmZZrYUyXx48c2KvQWFj5djAXUsU/exec";
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxsS-LIgVAaxfu3dCEYeEaX2QX7vBMNORlNLNl_N17qVbc_Us50BcQ2KhohFBVzeDVC/exec";
     let allSurveysData = [];
 
     function parse3DigitCodes(inputStr) {
@@ -153,7 +161,8 @@
           method: 'POST',
           body: JSON.stringify({
             textData: document.getElementById('inputText').value,
-            groupName: document.getElementById('groupNameInput').value
+            groupName: document.getElementById('groupNameInput').value,
+            isSokuP: document.getElementById('sokuPCheck').checked
           })
         });
         const result = await res.json();
@@ -163,7 +172,7 @@
           document.getElementById('inputText').value = "";
           loadSurveys();
         } else {
-          throw new Error(result.message);
+          throw new Error(result.message || "作成エラーが発生しました");
         }
       } catch (err) {
         status.className = "text-center p-3 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300";
@@ -175,7 +184,7 @@
       }
     });
 
-    // 一覧読み込み
+    // アンケート一覧取得（構造の違いを吸収してパース）
     async function loadSurveys() {
       const container = document.getElementById('surveyCheckboxContainer');
       const groupSelect = document.getElementById('groupFilterSelect');
@@ -184,24 +193,39 @@
       try {
         const res = await fetch(GAS_API_URL);
         const data = await res.json();
-        if (data.status === "OK") {
-          allSurveysData = data.surveys;
-          const groups = [...new Set(allSurveysData.map(s => s.groupName))];
-          const currentGroupVal = groupSelect.value;
-          
-          groupSelect.innerHTML = '<option value="ALL">すべて表示</option>';
-          groups.forEach(g => {
-            const opt = document.createElement('option');
-            opt.value = g;
-            opt.textContent = g;
-            groupSelect.appendChild(opt);
-          });
-          if (groups.includes(currentGroupVal)) groupSelect.value = currentGroupVal;
 
-          renderCheckboxes();
+        // GASレスポンスが配列直接か { surveys: [...] } かを自動判定
+        if (Array.isArray(data)) {
+          allSurveysData = data;
+        } else if (data && data.surveys) {
+          allSurveysData = data.surveys;
+        } else {
+          allSurveysData = [];
         }
+
+        // データの正規化 (name / title, limit / groupName の互換補正)
+        allSurveysData = allSurveysData.map(item => ({
+          title: item.title || item.name || "名称未設定",
+          point: item.point || "0",
+          type: item.type || "事前アンケート",
+          groupName: item.groupName || item.limit || "未分類"
+        }));
+
+        const groups = [...new Set(allSurveysData.map(s => s.groupName))];
+        const currentGroupVal = groupSelect.value;
+        
+        groupSelect.innerHTML = '<option value="ALL">すべて表示</option>';
+        groups.forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          opt.textContent = g;
+          groupSelect.appendChild(opt);
+        });
+        if (groups.includes(currentGroupVal)) groupSelect.value = currentGroupVal;
+
+        renderCheckboxes();
       } catch (e) {
-        container.innerHTML = '<p class="text-xs text-rose-500 font-bold">読み込み失敗</p>';
+        container.innerHTML = '<p class="text-xs text-rose-500 font-bold">データの読み込みに失敗しました。</p>';
       }
     }
 
@@ -278,7 +302,7 @@
           syncStatus.textContent = `✅ 一括反映完了: 選択した${titles.length}件のアンケートを更新しました！`;
           loadSurveys();
         } else {
-          throw new Error(result.message);
+          throw new Error(result.message || "更新処理に失敗しました");
         }
       } catch (err) {
         syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300 text-center";
