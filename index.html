@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>アンケート一括生成ツール</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen p-6">
+  <div class="max-w-3xl mx-auto bg-white rounded-2xl shadow-xl p-6 space-y-6">
+    <div class="text-center border-b pb-4">
+      <h1 class="text-2xl font-bold text-slate-800">📋 アンケート一括生成ツール</h1>
+      <p class="text-xs text-slate-500 mt-1">AIが作成したテキストを貼り付けて一括生成できます</p>
+    </div>
+    
+    <form id="surveyForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-semibold text-slate-700 mb-2">生成用テキスト入力エリア</label>
+        <textarea 
+          id="inputText" 
+          rows="14" 
+          required 
+          placeholder="ここにAI（チャット）が作成したアンケートテキストをそのまま貼り付けてください" 
+          class="w-full border border-slate-300 rounded-xl p-4 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none font-mono bg-slate-50"
+        ></textarea>
+      </div>
+
+      <button 
+        type="submit" 
+        id="submitBtn" 
+        class="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-bold py-3.5 rounded-xl transition duration-200 shadow-md flex items-center justify-center gap-2"
+      >
+        <span>Googleフォーム生成 ＆ シートへ書き込み</span>
+      </button>
+    </form>
+
+    <div id="statusMessage" class="hidden text-center p-4 rounded-xl text-sm font-bold"></div>
+  </div>
+
+  <script>
+    // 発行されたGASのAPI URL
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyhZoykw8fxGd1a_unzChuHFct1dK-P9S8TErPVTmZZrYUyXx48c2KvQWFj5djAXUsU/exec";
+
+    document.getElementById('surveyForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const status = document.getElementById('statusMessage');
+
+      btn.disabled = true;
+      btn.innerHTML = `<svg class="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> <span>フォーム生成中...</span>`;
+      status.className = "hidden";
+
+      try {
+        const res = await fetch(GAS_API_URL, {
+          method: 'POST',
+          body: JSON.stringify({ textData: document.getElementById('inputText').value })
+        });
+        const result = await res.json();
+
+        if (result.status === "OK") {
+          status.className = "text-center p-4 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
+          status.textContent = `🎉 成功: ${result.count}件のアンケートを作成し、スプレッドシートに書き込みました！`;
+          document.getElementById('inputText').value = "";
+        } else {
+          throw new Error(result.message);
+        }
+      } catch (err) {
+        status.className = "text-center p-4 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300";
+        status.textContent = "❌ エラーが発生しました: " + err.message;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = `<span>Googleフォーム生成 ＆ シートへ書き込み</span>`;
+        status.classList.remove('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
