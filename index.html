@@ -1,316 +1,243 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>アンケート統合管理ポータル</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-slate-100 min-h-screen p-6 font-sans">
-  <div class="max-w-5xl mx-auto space-y-8">
+  <base target="_top">
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }
+    .card { background: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 20px; }
+    h2 { margin-top: 0; font-size: 1.3em; color: #1a252f; border-bottom: 2px solid #3498db; padding-bottom: 8px; }
+    h3 { font-size: 1.1em; color: #2c3e50; margin-top: 20px; }
     
-    <!-- ヘッダー -->
-    <div class="bg-gradient-to-r from-slate-800 to-indigo-900 rounded-2xl p-6 text-white shadow-xl flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold tracking-tight">📋 アンケート統合管理システム</h1>
-        <p class="text-xs text-slate-300 mt-1">グループ管理・一括生成・複数選択一括更新</p>
-      </div>
-      <button id="loadSurveysBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-4 py-2.5 rounded-xl font-bold transition shadow">
-        シート再読み込み 🔄
-      </button>
+    input, select, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #cccccc; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+    button { background: #27ae60; color: #ffffff; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+    button:hover { background: #219150; }
+    
+    /* アンケートカード */
+    .survey-item { border: 1px solid #e1e8ed; border-left: 5px solid #3498db; padding: 14px; margin-bottom: 12px; background: #ffffff; border-radius: 6px; }
+    
+    /* 「本」アンケートを目立たせる強調枠 */
+    .survey-item.main-survey { border-left-color: #e67e22; background: #fffdf9; border-color: #f39c12; }
+    
+    /* 【即P】タグ：上品で目立つバッジ */
+    .badge-instant {
+      display: inline-flex;
+      align-items: center;
+      background: #eb4d4b;
+      color: #ffffff;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 3px 8px;
+      border-radius: 4px;
+      margin-right: 6px;
+      letter-spacing: 0.5px;
+      box-shadow: 0 1px 3px rgba(235, 77, 75, 0.3);
+    }
+    
+    .type-badge {
+      display: inline-block;
+      background: #7f8c8d;
+      color: #fff;
+      font-size: 11px;
+      padding: 2px 6px;
+      border-radius: 3px;
+      margin-right: 6px;
+    }
+    .type-badge.main { background: #e67e22; }
+
+    .survey-meta { font-size: 12px; color: #7f8c8d; margin-top: 6px; line-height: 1.5; }
+    .points-info { font-weight: bold; color: #2c3e50; margin-top: 8px; font-size: 1.05em; }
+    .yen-info { color: #d35400; font-weight: bold; margin-left: 6px; }
+    .btn-answer { display: inline-block; background: #2980b9; color: white; text-decoration: none; padding: 8px 16px; border-radius: 4px; font-size: 13px; font-weight: bold; margin-top: 8px; text-align: center; }
+    .hidden { display: none; }
+    .link-btn { color: #2980b9; text-decoration: none; font-size: 13px; display: inline-block; margin-top: 10px; }
+  </style>
+</head>
+<body>
+
+  <!-- ログイン画面 -->
+  <div id="login-section" class="card">
+    <h2>クロワルモニター ログイン</h2>
+    <p style="font-size: 12px; color: #e74c3c;">※サイトリニューアルのため、再ログインが必要です。</p>
+    <input type="text" id="login-id" placeholder="モニター番号">
+    <input type="text" id="login-name" placeholder="登録名">
+    <input type="text" id="login-pref" placeholder="県（例: 東京都）">
+    <button onclick="handleLogin()">ログイン</button>
+    <a href="#" class="link-btn" onclick="showRegister()">新規モニター登録はこちら</a>
+  </div>
+
+  <!-- 新規登録画面 -->
+  <div id="register-section" class="card hidden">
+    <h2>新規モニター登録</h2>
+    <input type="text" id="reg-id" placeholder="モニター番号">
+    <input type="text" id="reg-name" placeholder="名前">
+    <input type="text" id="reg-pref" placeholder="県">
+    <select id="reg-age">
+      <option value="">年齢層を選択してください</option>
+      <option value="10-20">10-20</option>
+      <option value="30-50">30-50</option>
+      <option value="50-55">50-55</option>
+      <option value="60-70">60-70</option>
+      <option value="その他">その他</option>
+    </select>
+    <button onclick="handleRegister()">登録する</button>
+    <a href="#" class="link-btn" onclick="showLogin()">ログイン画面に戻る</a>
+  </div>
+
+  <!-- マイページ & アンケート一覧 -->
+  <div id="app-section" class="card hidden">
+    <h2>マイページ</h2>
+    <div style="background:#f8f9fa; border:1px solid #e9ecef; padding:12px; border-radius:8px; margin-bottom:15px;">
+      <p style="margin:4px 0;"><strong>会員名:</strong> <span id="user-name"></span> 様 (<span id="user-id"></span>)</p>
+      <p style="margin:4px 0;"><strong>保有ポイント:</strong> <strong id="user-points" style="font-size:1.2em; color:#e67e22;">0</strong> pt 
+         <span id="user-yen" class="yen-info">（0円分相当）</span></p>
+      <p style="margin:4px 0;"><strong>アンケート回答数:</strong> <span id="user-count">0</span> 回</p>
     </div>
+    <button onclick="handleLogout()" style="background:#95a5a6; padding:8px; margin-bottom:10px;">ログアウト</button>
 
-    <!-- 1. 新規アンケート一括生成エリア -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 space-y-4">
-      <div class="border-b pb-3">
-        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="bg-blue-100 text-blue-700 text-xs px-2.5 py-1 rounded-full font-bold">STEP 1</span>
-          新規アンケート一括生成（グループ設定）
-        </h2>
-      </div>
-      
-      <form id="surveyForm" class="space-y-4">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label class="block text-sm font-bold text-slate-700 mb-1">グループ名（タグ）</label>
-            <input type="text" id="groupNameInput" required placeholder="例: 4月度案件A" class="w-full border border-slate-300 rounded-xl p-3 text-sm bg-slate-50">
-          </div>
-          <div class="flex items-center pt-6">
-            <label class="flex items-center gap-2 cursor-pointer text-sm font-bold text-indigo-700 bg-indigo-50 p-3 rounded-xl border border-indigo-200 w-full">
-              <input type="checkbox" id="sokuPCheck" class="w-4 h-4 text-indigo-600 rounded">
-              ⚡ 即P（即時ポイント付与）対象にする
-            </label>
-          </div>
-        </div>
-        <div>
-          <label class="block text-sm font-bold text-slate-700 mb-1">AIテキスト貼り付け</label>
-          <textarea id="inputText" rows="5" required placeholder="=== アンケート 1 ===&#10;タイトル: ...&#10;..." class="w-full border border-slate-300 rounded-xl p-4 text-sm font-mono bg-slate-50"></textarea>
-        </div>
-        <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow">
-          Googleフォーム一括生成 ＆ 登録
-        </button>
-      </form>
-      <div id="statusMessage" class="hidden text-center p-3 rounded-xl text-sm font-bold"></div>
-    </div>
-
-    <!-- 2. グループ別・複数選択一括設定エリア -->
-    <div class="bg-white rounded-2xl shadow-xl p-6 space-y-6">
-      <div class="border-b pb-3">
-        <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <span class="bg-indigo-100 text-indigo-700 text-xs px-2.5 py-1 rounded-full font-bold">STEP 2</span>
-          獲得者 ＆ 対象者の一括設定
-        </h2>
-      </div>
-
-      <!-- フィルター ＆ 全選択 -->
-      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-        <div class="w-full md:w-1/2">
-          <label class="block text-xs font-bold text-slate-600 mb-1">グループで絞り込み</label>
-          <select id="groupFilterSelect" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white font-medium">
-            <option value="ALL">すべて表示</option>
-          </select>
-        </div>
-        <div class="flex gap-2 w-full md:w-auto justify-end">
-          <button id="selectAllBtn" type="button" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg font-bold transition">表示中を全選択</button>
-          <button id="deselectAllBtn" type="button" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 px-3 py-2 rounded-lg font-bold transition">全解除</button>
-        </div>
-      </div>
-
-      <!-- チェックボックス一覧 -->
-      <div id="surveyCheckboxContainer" class="max-h-60 overflow-y-auto border border-slate-200 rounded-xl p-4 bg-slate-50 space-y-2">
-        <p class="text-xs text-slate-400">読み込み中...</p>
-      </div>
-
-      <!-- 番号入力グリッド -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div class="flex justify-between items-center">
-            <label class="block text-sm font-bold text-amber-800">🏆 獲得者モニター番号</label>
-            <span class="text-xs text-slate-500">3桁自動分割</span>
-          </div>
-          <textarea id="rawWinnerInput" rows="4" placeholder="例: 101102103" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
-          <div class="text-xs space-y-1">
-            <div class="text-slate-600 font-medium">整形結果 (<span id="winnerCount" class="font-bold text-amber-700">0</span>人):</div>
-            <div id="winnerParsed" class="p-2.5 bg-white rounded-lg border border-slate-200 font-mono text-slate-800 min-h-[40px] break-all">（なし）</div>
-          </div>
-        </div>
-
-        <div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
-          <div class="flex justify-between items-center">
-            <label class="block text-sm font-bold text-emerald-800">🎯 本アンケート対象者モニター番号</label>
-            <span class="text-xs text-slate-500">3桁自動分割</span>
-          </div>
-          <textarea id="rawTargetInput" rows="4" placeholder="例: 104105106" class="w-full border border-slate-300 rounded-xl p-3 text-sm font-mono bg-white"></textarea>
-          <div class="text-xs space-y-1">
-            <div class="text-slate-600 font-medium">整形結果 (<span id="targetCount" class="font-bold text-emerald-700">0</span>人):</div>
-            <div id="targetParsed" class="p-2.5 bg-white rounded-lg border border-slate-200 font-mono text-slate-800 min-h-[40px] break-all">（なし）</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 反映ボタン -->
-      <button id="saveToSheetBtn" type="button" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl transition shadow-lg text-base">
-        💾 選択したすべてのアンケートに一括反映する
-      </button>
-
-      <div id="syncStatus" class="hidden text-center p-3 rounded-xl text-sm font-bold"></div>
-    </div>
-
+    <h3>利用可能なアンケート一覧</h3>
+    <div id="survey-list">読み込み中...</div>
   </div>
 
   <script>
-    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbxsS-LIgVAaxfu3dCEYeEaX2QX7vBMNORlNLNl_N17qVbc_Us50BcQ2KhohFBVzeDVC/exec";
-    let allSurveysData = [];
-
-    function parse3DigitCodes(inputStr) {
-      const rawDigits = inputStr.replace(/\D/g, '');
-      const matches = rawDigits.match(/.{1,3}/g) || [];
-      return matches.filter(code => code.length === 3);
-    }
-
-    const winnerInput = document.getElementById('rawWinnerInput');
-    const winnerParsed = document.getElementById('winnerParsed');
-    const winnerCount = document.getElementById('winnerCount');
-    winnerInput.addEventListener('input', () => {
-      const codes = parse3DigitCodes(winnerInput.value);
-      winnerParsed.textContent = codes.length > 0 ? codes.join(', ') : '（なし）';
-      winnerCount.textContent = codes.length;
-    });
-
-    const targetInput = document.getElementById('rawTargetInput');
-    const targetParsed = document.getElementById('targetParsed');
-    const targetCount = document.getElementById('targetCount');
-    targetInput.addEventListener('input', () => {
-      const codes = parse3DigitCodes(targetInput.value);
-      targetParsed.textContent = codes.length > 0 ? codes.join(', ') : '（なし）';
-      targetCount.textContent = codes.length;
-    });
-
-    // 新規作成送信
-    document.getElementById('surveyForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const btn = document.getElementById('submitBtn');
-      const status = document.getElementById('statusMessage');
-
-      btn.disabled = true;
-      btn.innerHTML = "一括生成中...";
-      status.className = "hidden";
-
-      try {
-        const res = await fetch(GAS_API_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            textData: document.getElementById('inputText').value,
-            groupName: document.getElementById('groupNameInput').value,
-            isSokuP: document.getElementById('sokuPCheck').checked
-          })
-        });
-        const result = await res.json();
-        if (result.status === "OK") {
-          status.className = "text-center p-3 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300";
-          status.textContent = `🎉 成功: ${result.count}件のアンケートを作成しグループ登録しました！`;
-          document.getElementById('inputText').value = "";
-          loadSurveys();
-        } else {
-          throw new Error(result.message || "作成エラーが発生しました");
-        }
-      } catch (err) {
-        status.className = "text-center p-3 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300";
-        status.textContent = "❌ エラー: " + err.message;
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = "Googleフォーム一括生成 ＆ 登録";
-        status.classList.remove('hidden');
+    // サイトリニューアル対応：初回来訪時にローカルストレージのセッションを破棄して強制ログアウト
+    window.onload = function() {
+      const isRelaunched = localStorage.getItem('site_relaunched_v3');
+      if (!isRelaunched) {
+        localStorage.removeItem('kurowaru_user');
+        localStorage.setItem('site_relaunched_v3', 'true');
       }
-    });
-
-    // アンケート一覧取得（構造の違いを吸収してパース）
-    async function loadSurveys() {
-      const container = document.getElementById('surveyCheckboxContainer');
-      const groupSelect = document.getElementById('groupFilterSelect');
-      container.innerHTML = '<p class="text-xs text-slate-400">読み込み中...</p>';
       
-      try {
-        const res = await fetch(GAS_API_URL);
-        const data = await res.json();
-
-        // GASレスポンスが配列直接か { surveys: [...] } かを自動判定
-        if (Array.isArray(data)) {
-          allSurveysData = data;
-        } else if (data && data.surveys) {
-          allSurveysData = data.surveys;
-        } else {
-          allSurveysData = [];
-        }
-
-        // データの正規化 (name / title, limit / groupName の互換補正)
-        allSurveysData = allSurveysData.map(item => ({
-          title: item.title || item.name || "名称未設定",
-          point: item.point || "0",
-          type: item.type || "事前アンケート",
-          groupName: item.groupName || item.limit || "未分類"
-        }));
-
-        const groups = [...new Set(allSurveysData.map(s => s.groupName))];
-        const currentGroupVal = groupSelect.value;
-        
-        groupSelect.innerHTML = '<option value="ALL">すべて表示</option>';
-        groups.forEach(g => {
-          const opt = document.createElement('option');
-          opt.value = g;
-          opt.textContent = g;
-          groupSelect.appendChild(opt);
-        });
-        if (groups.includes(currentGroupVal)) groupSelect.value = currentGroupVal;
-
-        renderCheckboxes();
-      } catch (e) {
-        container.innerHTML = '<p class="text-xs text-rose-500 font-bold">データの読み込みに失敗しました。</p>';
+      const savedUser = JSON.parse(localStorage.getItem('kurowaru_user'));
+      if (savedUser) {
+        autoLogin(savedUser);
       }
+    };
+
+    function showRegister() {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('register-section').classList.remove('hidden');
     }
 
-    function renderCheckboxes() {
-      const container = document.getElementById('surveyCheckboxContainer');
-      const selectedGroup = document.getElementById('groupFilterSelect').value;
-      const filtered = allSurveysData.filter(s => selectedGroup === 'ALL' || s.groupName === selectedGroup);
+    function showLogin() {
+      document.getElementById('register-section').classList.add('hidden');
+      document.getElementById('login-section').classList.remove('hidden');
+    }
 
-      if (filtered.length === 0) {
-        container.innerHTML = '<p class="text-xs text-slate-400">該当するアンケートがありません。</p>';
+    // 会員登録実行
+    function handleRegister() {
+      const data = {
+        monitorId: document.getElementById('reg-id').value.trim(),
+        name: document.getElementById('reg-name').value.trim(),
+        prefecture: document.getElementById('reg-pref').value.trim(),
+        ageGroup: document.getElementById('reg-age').value
+      };
+
+      if (!data.monitorId || !data.name || !data.prefecture || !data.ageGroup) {
+        alert('すべての項目を入力してください。');
         return;
       }
 
-      container.innerHTML = '';
-      filtered.forEach(s => {
-        const wrapper = document.createElement('label');
-        wrapper.className = "flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:bg-slate-50 transition";
-        wrapper.innerHTML = `
-          <div class="flex items-center gap-3">
-            <input type="checkbox" value="${s.title}" class="survey-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-slate-300">
-            <div>
-              <span class="text-sm font-bold text-slate-800">${s.title}</span>
-              <span class="text-xs text-slate-500 ml-2">(${s.point}pt / ${s.type})</span>
+      google.script.run.withSuccessHandler(res => {
+        alert(res.message);
+        if (res.success) showLogin();
+      }).registerUser(data);
+    }
+
+    // ログイン実行
+    function handleLogin() {
+      const id = document.getElementById('login-id').value.trim();
+      const name = document.getElementById('login-name').value.trim();
+      const pref = document.getElementById('login-pref').value.trim();
+
+      if (!id || !name || !pref) {
+        alert('モニター番号、名前、県をすべて入力してください。');
+        return;
+      }
+
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) {
+          localStorage.setItem('kurowaru_user', JSON.stringify(res.user));
+          renderApp(res.user);
+        } else {
+          alert(res.message);
+        }
+      }).loginUser(id, name, pref);
+    }
+
+    // 自動ログイン
+    function autoLogin(user) {
+      google.script.run.withSuccessHandler(res => {
+        if (res.success) {
+          localStorage.setItem('kurowaru_user', JSON.stringify(res.user));
+          renderApp(res.user);
+        }
+      }).loginUser(user.monitorId, user.name, user.prefecture);
+    }
+
+    // ログアウト
+    function handleLogout() {
+      localStorage.removeItem('kurowaru_user');
+      location.reload();
+    }
+
+    // マイページ描画
+    function renderApp(user) {
+      document.getElementById('login-section').classList.add('hidden');
+      document.getElementById('register-section').classList.add('hidden');
+      document.getElementById('app-section').classList.remove('hidden');
+
+      document.getElementById('user-id').innerText = user.monitorId;
+      document.getElementById('user-name').innerText = user.name;
+      document.getElementById('user-points').innerText = user.points;
+      
+      const yen = (user.points / 10).toFixed(0);
+      document.getElementById('user-yen').innerText = `（${yen}円分相当）`;
+      document.getElementById('user-count').innerText = user.responseCount;
+
+      loadSurveys();
+    }
+
+    // アンケート一覧読み込み・描画
+    function loadSurveys() {
+      google.script.run.withSuccessHandler(surveys => {
+        const container = document.getElementById('survey-list');
+        container.innerHTML = '';
+
+        if (surveys.length === 0) {
+          container.innerHTML = '<p style="color:#7f8c8d;">現在利用できるアンケートはありません。</p>';
+          return;
+        }
+
+        surveys.forEach(s => {
+          const div = document.createElement('div');
+          const isMain = s.type === '本';
+          div.className = 'survey-item' + (isMain ? ' main-survey' : '');
+          
+          let titleDisplay = s.title.replace('【即P】', '').trim();
+          let badgeHtml = s.isInstant ? `<span class="badge-instant">即時ポイント付与</span>` : '';
+          let typeBadge = `<span class="type-badge ${isMain ? 'main' : ''}">${s.type || '事前'}</span>`;
+
+          let metaDetails = [];
+          if (s.deadline) metaDetails.push(`回答期限: ${s.deadline}`);
+          if (s.targetUsers) metaDetails.push(`対象: ${s.targetUsers}`);
+          if (s.pointEarners) metaDetails.push(`ポイント獲得者: ${s.pointEarners}`);
+
+          let linkHtml = s.link ? `<a href="${s.link}" target="_blank" class="btn-answer">アンケートに回答する</a>` : '';
+
+          div.innerHTML = `
+            <div style="font-size:15px; font-weight:bold; line-height:1.4;">
+              ${badgeHtml}${typeBadge}${titleDisplay}
             </div>
-          </div>
-          <span class="text-xs bg-indigo-50 text-indigo-700 px-2 py-1 rounded font-semibold border border-indigo-100">${s.groupName}</span>
-        `;
-        container.appendChild(wrapper);
-      });
-    }
-
-    document.getElementById('groupFilterSelect').addEventListener('change', renderCheckboxes);
-
-    document.getElementById('selectAllBtn').addEventListener('click', () => {
-      document.querySelectorAll('.survey-checkbox').forEach(cb => cb.checked = true);
-    });
-    document.getElementById('deselectAllBtn').addEventListener('click', () => {
-      document.querySelectorAll('.survey-checkbox').forEach(cb => cb.checked = false);
-    });
-
-    document.getElementById('loadSurveysBtn').addEventListener('click', loadSurveys);
-
-    // 一括反映
-    document.getElementById('saveToSheetBtn').addEventListener('click', async () => {
-      const selectedBoxes = Array.from(document.querySelectorAll('.survey-checkbox:checked'));
-      const syncStatus = document.getElementById('syncStatus');
-      
-      if (selectedBoxes.length === 0) {
-        alert('対象のアンケートを1つ以上選択してください。');
-        return;
-      }
-
-      const titles = selectedBoxes.map(cb => cb.value);
-      const winners = parse3DigitCodes(winnerInput.value).join(', ');
-      const targets = parse3DigitCodes(targetInput.value).join(', ');
-
-      syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-amber-100 text-amber-800 border border-amber-300 text-center";
-      syncStatus.textContent = `${titles.length}件のアンケートへ一括反映中...`;
-      syncStatus.classList.remove('hidden');
-
-      try {
-        const res = await fetch(GAS_API_URL, {
-          method: 'POST',
-          body: JSON.stringify({
-            action: "updateSurveys",
-            titles: titles,
-            winner: winners,
-            target: targets
-          })
+            <div class="points-info">
+              ポイント: ${s.points} <span class="yen-info">(${s.yenValue})</span>
+            </div>
+            ${metaDetails.length > 0 ? `<div class="survey-meta">${metaDetails.join(' | ')}</div>` : ''}
+            ${linkHtml}
+          `;
+          container.appendChild(div);
         });
-        const result = await res.json();
-        if (result.status === "OK") {
-          syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 text-center";
-          syncStatus.textContent = `✅ 一括反映完了: 選択した${titles.length}件のアンケートを更新しました！`;
-          loadSurveys();
-        } else {
-          throw new Error(result.message || "更新処理に失敗しました");
-        }
-      } catch (err) {
-        syncStatus.className = "p-3 rounded-xl text-sm font-bold bg-rose-100 text-rose-800 border border-rose-300 text-center";
-        syncStatus.textContent = "❌ 更新エラー: " + err.message;
-      }
-    });
-
-    loadSurveys();
+      }).getSurveys();
+    }
   </script>
 </body>
 </html>
